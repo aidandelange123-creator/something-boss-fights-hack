@@ -1,489 +1,284 @@
--- Config (keep this outside in your launcher)
--- _G.SomethingBossFightConfig = {
---     maxDistance = 15,
---     autoDeflectSpeed = 10,
---     autoKillSpeed = 5,
---     instantKillDuration = 1
--- }
-
--- Executor-specific optimizations for Delta/Xeno
+-- [KILL AURA SCRIPT] for Delta/Xeno Executors
+-- Attacks ANYTHING with health (including NPCs, players, etc.)
 local Players = game:GetService("Players")
-local RepStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
+local RepStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 
--- Executor-friendly GUI
-local customGui = Instance.new("ScreenGui")
-customGui.Name = "ExecutorBossFightGUI"
-customGui.ResetOnSpawn = false
-customGui.Parent = player:WaitForChild("PlayerGui")
+-- Create GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "KillAuraGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
 local window = Instance.new("Frame")
-window.Name = "MainWindow"
-window.Size = UDim2.new(0, 250, 0, 350)
-window.Position = UDim2.new(0.5, -125, 0.5, -175)
-window.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+window.Size = UDim2.new(0, 250, 0, 250)
+window.Position = UDim2.new(0.5, -125, 0.5, -125)
+window.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 window.BorderSizePixel = 0
-window.Parent = customGui
+window.Parent = gui
 
--- Title bar
-local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 30)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = window
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "Kill Aura & Fly"
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 16
+title.Parent = window
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "TitleLabel"
-titleLabel.Size = UDim2.new(1, 0, 1, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Something Boss Fight"
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextSize = 16
-titleLabel.Parent = titleBar
+-- Kill Aura Toggle
+local killAuraEnabled = false
+local killAuraConnection = nil
 
--- Close button
-local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -30, 0, 0)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeButton.Text = "×"
-closeButton.TextColor3 = Color3.new(1, 1, 1)
-closeButton.TextSize = 20
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = titleBar
+local killAuraBtn = Instance.new("TextButton")
+killAuraBtn.Size = UDim2.new(1, -20, 0, 30)
+killAuraBtn.Position = UDim2.new(0, 10, 0, 40)
+killAuraBtn.Text = "Kill Aura: OFF"
+killAuraBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+killAuraBtn.TextColor3 = Color3.new(1, 1, 1)
+killAuraBtn.Font = Enum.Font.SourceSans
+killAuraBtn.TextSize = 14
+killAuraBtn.Parent = window
 
--- Content area
-local content = Instance.new("Frame")
-content.Name = "Content"
-content.Size = UDim2.new(1, 0, 1, -30)
-content.Position = UDim2.new(0, 0, 0, 30)
-content.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-content.BorderSizePixel = 0
-content.Parent = window
-
--- Scroll container for content
-local scroll = Instance.new("ScrollingFrame")
-scroll.Name = "Scroll"
-scroll.Size = UDim2.new(1, 0, 1, 0)
-scroll.Position = UDim2.new(0, 0, 0, 0)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 4
-scroll.Parent = content
-
-local layout = Instance.new("UIListLayout")
-layout.Parent = scroll
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-
--- Auto Kill Toggle
-local killToggled = false
-local killConnection = nil
-
-local killToggle = Instance.new("TextButton")
-killToggle.Name = "AutoKillToggle"
-killToggle.Size = UDim2.new(1, -20, 0, 30)
-killToggle.Position = UDim2.new(0, 10, 0, 10)
-killToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-killToggle.TextColor3 = Color3.new(1, 1, 1)
-killToggle.Font = Enum.Font.SourceSans
-killToggle.TextSize = 14
-killToggle.Text = "Auto Kill: OFF"
-killToggle.Parent = scroll
-
-killToggle.MouseButton1Click:Connect(function()
-    killToggled = not killToggled
-    killToggle.Text = "Auto Kill: " .. (killToggled and "ON" or "OFF")
-    killToggle.BackgroundColor3 = killToggled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
+killAuraBtn.MouseButton1Click:Connect(function()
+    killAuraEnabled = not killAuraEnabled
+    killAuraBtn.Text = "Kill Aura: " .. (killAuraEnabled and "ON" or "OFF")
+    killAuraBtn.BackgroundColor3 = killAuraEnabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
     
-    if killToggled then
-        -- Start auto kill loop with executor-friendly optimizations
-        killConnection = RunService.Heartbeat:Connect(function()
-            if killToggled then
-                -- Executor-friendly error handling
-                local success, result = pcall(function()
-                    -- Get player character
-                    local playerChar = player.Character
-                    if not playerChar then return end
-                    
-                    -- Find enemies in workspace with executor optimization
-                    local enemies = {}
-                    local workspaceChildren = workspace:GetChildren()
-                    
-                    -- Optimized enemy filtering for executors
-                    for i = 1, #workspaceChildren do
-                        local obj = workspaceChildren[i]
-                        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj.Name ~= player.Name then
-                            local humanoid = obj:FindFirstChild("Humanoid")
-                            if humanoid and humanoid.Health > 0 then
-                                -- Check if it's actually an enemy (has HumanoidRootPart)
-                                local root = obj:FindFirstChild("HumanoidRootPart")
-                                if root then
-                                    table.insert(enemies, {
-                                        model = obj,
-                                        humanoid = humanoid,
-                                        root = root
-                                    })
-                                end
+    if killAuraEnabled then
+        killAuraConnection = RunService.Heartbeat:Connect(function()
+            if killAuraEnabled then
+                local char = player.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                
+                local playerPos = char.HumanoidRootPart.Position
+                local targets = {}
+                
+                -- Find ALL objects with health in workspace
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    -- Check if object has health (any kind of health system)
+                    if obj:IsA("Model") or obj:IsA("Part") or obj:IsA("BasePart") then
+                        -- Look for health-related properties
+                        local health = obj:FindFirstChild("Health")
+                        local humanoid = obj:FindFirstChild("Humanoid")
+                        local humanoidRootPart = obj:FindFirstChild("HumanoidRootPart")
+                        
+                        -- Attack anything with health properties
+                        if health and health.Value > 0 then
+                            local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj
+                            local distance = (root.Position - playerPos).Magnitude
+                            if distance <= 15 then
+                                table.insert(targets, {object = obj, root = root, distance = distance, type = "Health"})
+                            end
+                        elseif humanoid and humanoid.Health > 0 then
+                            local root = humanoidRootPart or obj:FindFirstChild("Torso") or obj
+                            local distance = (root.Position - playerPos).Magnitude
+                            if distance <= 15 then
+                                table.insert(targets, {object = obj, root = root, distance = distance, type = "Humanoid"})
+                            end
+                        elseif obj:IsA("Part") and obj:FindFirstChild("Health") then
+                            -- Direct part with health
+                            local distance = (obj.Position - playerPos).Magnitude
+                            if distance <= 15 then
+                                table.insert(targets, {object = obj, root = obj, distance = distance, type = "PartHealth"})
                             end
                         end
                     end
-                    
-                    -- Damage all enemies found with executor-friendly delays
-                    for i = 1, #enemies do
-                        local enemy = enemies[i]
-                        -- Executor-friendly delay to prevent detection
-                        local delay = math.random(50, 150) / 1000
-                        spawn(function()
-                            if killToggled then
-                                task.delay(delay, function()
-                                    if killToggled then
-                                        -- Try to damage using various attack methods
-                                        local attackMethods = {"M1", "Slash", "W1_M1", "Swing", "Sentry", "M1_1", "M1_2", "M1_3", "M1_4"}
-                                        
-                                        for j = 1, #attackMethods do
-                                            local method = attackMethods[j]
-                                            -- Safely attempt to send damage event
-                                            if RepStorage.Events and RepStorage.Events.DamageEnemy then
-                                                local success, result = pcall(function()
-                                                    RepStorage.Events.DamageEnemy:FireServer(enemy.model, method)
-                                                end)
-                                            end
-                                        end
-                                    end
-                                end)
-                            end
-                        end)
-                    end
-                end)
+                end
                 
-                if not success then
-                    -- Handle error silently for executor
-                    -- print("Auto kill error:", result)
+                -- Sort by distance (closest first)
+                table.sort(targets, function(a, b) return a.distance < b.distance end)
+                
+                -- Attack closest target
+                if #targets > 0 then
+                    local target = targets[1]
+                    -- Use built-in weapon attack
+                    local weapon = char:FindFirstChild("Tool") or char:FindFirstChild("RightHand") or char:FindFirstChild("LeftHand")
+                    
+                    if weapon then
+                        -- Try to damage with weapon
+                        if RepStorage.Events and RepStorage.Events.DamageEnemy then
+                            RepStorage.Events.DamageEnemy:FireServer(target.object, "M1")
+                        end
+                    else
+                        -- Default attack
+                        if RepStorage.Events and RepStorage.Events.DamageEnemy then
+                            RepStorage.Events.DamageEnemy:FireServer(target.object, "M1")
+                        end
+                    end
                 end
             end
         end)
     else
-        -- Stop auto kill with proper cleanup
-        if killConnection then
-            killConnection:Disconnect()
-            killConnection = nil
+        if killAuraConnection then
+            killAuraConnection:Disconnect()
+            killAuraConnection = nil
+        end
+    end
+end)
+
+-- Fly Toggle
+local flyEnabled = false
+local flyConnection = nil
+local flyVelocity = Vector3.new(0, 0, 0)
+local flyInput = Vector3.new(0, 0, 0)
+
+local flyBtn = Instance.new("TextButton")
+flyBtn.Size = UDim2.new(1, -20, 0, 30)
+flyBtn.Position = UDim2.new(0, 10, 0, 80)
+flyBtn.Text = "Fly: OFF"
+flyBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+flyBtn.TextColor3 = Color3.new(1, 1, 1)
+flyBtn.Font = Enum.Font.SourceSans
+flyBtn.TextSize = 14
+flyBtn.Parent = window
+
+flyBtn.MouseButton1Click:Connect(function()
+    flyEnabled = not flyEnabled
+    flyBtn.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
+    flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
+    
+    if flyEnabled then
+        -- Enable fly mode
+        local char = player.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.Anchored = true
+                root.CanCollide = false
+            end
+        end
+        
+        -- Start fly loop
+        flyConnection = RunService.Heartbeat:Connect(function()
+            if flyEnabled and player.Character then
+                local char = player.Character
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    -- Apply fly movement
+                    local moveDirection = flyInput.Unit * 50
+                    flyVelocity = moveDirection
+                    
+                    -- Update position
+                    root.CFrame = root.CFrame + flyVelocity * (1/60)
+                    
+                    -- Apply damping
+                    flyVelocity = flyVelocity * 0.85
+                end
+            end
+        end)
+        
+        -- Input handling
+        UserInputService.InputBegan:Connect(function(input)
+            if input.KeyCode == Enum.KeyCode.W then
+                flyInput = flyInput + Vector3.new(0, 0, -1)
+            elseif input.KeyCode == Enum.KeyCode.S then
+                flyInput = flyInput + Vector3.new(0, 0, 1)
+            elseif input.KeyCode == Enum.KeyCode.A then
+                flyInput = flyInput + Vector3.new(-1, 0, 0)
+            elseif input.KeyCode == Enum.KeyCode.D then
+                flyInput = flyInput + Vector3.new(1, 0, 0)
+            elseif input.KeyCode == Enum.KeyCode.Space then
+                flyInput = flyInput + Vector3.new(0, 1, 0)
+            elseif input.KeyCode == Enum.KeyCode.LeftShift then
+                flyInput = flyInput + Vector3.new(0, -1, 0)
+            end
+        end)
+        
+        UserInputService.InputEnded:Connect(function(input)
+            if input.KeyCode == Enum.KeyCode.W then
+                flyInput = flyInput - Vector3.new(0, 0, -1)
+            elseif input.KeyCode == Enum.KeyCode.S then
+                flyInput = flyInput - Vector3.new(0, 0, 1)
+            elseif input.KeyCode == Enum.KeyCode.A then
+                flyInput = flyInput - Vector3.new(-1, 0, 0)
+            elseif input.KeyCode == Enum.KeyCode.D then
+                flyInput = flyInput - Vector3.new(1, 0, 0)
+            elseif input.KeyCode == Enum.KeyCode.Space then
+                flyInput = flyInput - Vector3.new(0, 1, 0)
+            elseif input.KeyCode == Enum.KeyCode.LeftShift then
+                flyInput = flyInput - Vector3.new(0, -1, 0)
+            end
+        end)
+    else
+        -- Disable fly mode
+        if flyConnection then
+            flyConnection:Disconnect()
+            flyConnection = nil
+        end
+        
+        local char = player.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.Anchored = false
+                root.CanCollide = true
+            end
         end
     end
 end)
 
 -- God Mode Toggle
-local godModeToggled = false
-local healthWatcher = nil
-local originalMaxHealth = 100
-local originalHealth = 100
+local godModeEnabled = false
+local godModeConnection = nil
 
-local godModeToggle = Instance.new("TextButton")
-godModeToggle.Name = "GodModeToggle"
-godModeToggle.Size = UDim2.new(1, -20, 0, 30)
-godModeToggle.Position = UDim2.new(0, 10, 0, 50)
-godModeToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-godModeToggle.TextColor3 = Color3.new(1, 1, 1)
-godModeToggle.Font = Enum.Font.SourceSans
-godModeToggle.TextSize = 14
-godModeToggle.Text = "God Mode: OFF"
-godModeToggle.Parent = scroll
+local godModeBtn = Instance.new("TextButton")
+godModeBtn.Size = UDim2.new(1, -20, 0, 30)
+godModeBtn.Position = UDim2.new(0, 10, 0, 120)
+godModeBtn.Text = "God Mode: OFF"
+godModeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+godModeBtn.TextColor3 = Color3.new(1, 1, 1)
+godModeBtn.Font = Enum.Font.SourceSans
+godModeBtn.TextSize = 14
+godModeBtn.Parent = window
 
-godModeToggle.MouseButton1Click:Connect(function()
-    godModeToggled = not godModeToggled
-    godModeToggle.Text = "God Mode: " .. (godModeToggled and "ON" or "OFF")
-    godModeToggle.BackgroundColor3 = godModeToggled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
+godModeBtn.MouseButton1Click:Connect(function()
+    godModeEnabled = not godModeEnabled
+    godModeBtn.Text = "God Mode: " .. (godModeEnabled and "ON" or "OFF")
+    godModeBtn.BackgroundColor3 = godModeEnabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
     
-    if godModeToggled then
-        -- Executor-friendly god mode
-        local success, result = pcall(function()
-            -- Enable god mode
-            local char = player.Character
-            if char then
-                local humanoid = char:FindFirstChild("Humanoid")
-                if humanoid then
-                    -- Store original values
-                    originalMaxHealth = humanoid.MaxHealth
-                    originalHealth = humanoid.Health
-                    
-                    -- Set infinite health
-                    humanoid.MaxHealth = math.huge
-                    humanoid.Health = math.huge
-                    
-                    -- Create health watcher to maintain health
-                    healthWatcher = RunService.Heartbeat:Connect(function()
-                        if godModeToggled and humanoid and humanoid.Parent then
-                            humanoid.Health = humanoid.MaxHealth
-                        end
-                    end)
-                end
+    if godModeEnabled then
+        -- Enable god mode
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.MaxHealth = math.huge
+                humanoid.Health = math.huge
             end
-        end)
-        
-        if not success then
-            -- print("God mode error:", result)
         end
     else
         -- Disable god mode
-        local success, result = pcall(function()
-            local char = player.Character
-            if char then
-                local humanoid = char:FindFirstChild("Humanoid")
-                if humanoid then
-                    -- Restore original values
-                    humanoid.MaxHealth = originalMaxHealth
-                    humanoid.Health = originalHealth
-                    
-                    -- Stop health watcher
-                    if healthWatcher then
-                        healthWatcher:Disconnect()
-                        healthWatcher = nil
-                    end
-                end
-            end
-        end)
-        
-        if not success then
-            -- print("God mode cleanup error:", result)
-        end
-    end
-end)
-
--- No Damage Toggle
-local noDamageToggled = false
-local noDamageConn = nil
-
-local noDamageToggle = Instance.new("TextButton")
-noDamageToggle.Name = "NoDamageToggle"
-noDamageToggle.Size = UDim2.new(1, -20, 0, 30)
-noDamageToggle.Position = UDim2.new(0, 10, 0, 90)
-noDamageToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-noDamageToggle.TextColor3 = Color3.new(1, 1, 1)
-noDamageToggle.Font = Enum.Font.SourceSans
-noDamageToggle.TextSize = 14
-noDamageToggle.Text = "No Damage: OFF"
-noDamageToggle.Parent = scroll
-
-noDamageToggle.MouseButton1Click:Connect(function()
-    noDamageToggled = not noDamageToggled
-    noDamageToggle.Text = "No Damage: " .. (noDamageToggled and "ON" or "OFF")
-    noDamageToggle.BackgroundColor3 = noDamageToggled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
-    
-    if noDamageToggled then
-        local success, result = pcall(function()
-            local t = 0
-            noDamageConn = RunService.Heartbeat:Connect(function(dt)
-                t = t + dt
-                if t >= 0.1 then
-                    t = 0
-                    if RepStorage.Events and RepStorage.Events.Rolling_iFrames then
-                        RepStorage.Events.Rolling_iFrames:FireServer()
-                    end
-                end
-            end)
-        end)
-        
-        if not success then
-            -- print("No damage error:", result)
-        end
-    else
-        if noDamageConn then
-            noDamageConn:Disconnect()
-            noDamageConn = nil
-        end
-    end
-end)
-
--- Auto Deflect Toggle
-local autoDeflectToggled = false
-local autoDeflectConn = nil
-
-local autoDeflectToggle = Instance.new("TextButton")
-autoDeflectToggle.Name = "AutoDeflectToggle"
-autoDeflectToggle.Size = UDim2.new(1, -20, 0, 30)
-autoDeflectToggle.Position = UDim2.new(0, 10, 0, 130)
-autoDeflectToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-autoDeflectToggle.TextColor3 = Color3.new(1, 1, 1)
-autoDeflectToggle.Font = Enum.Font.SourceSans
-autoDeflectToggle.TextSize = 14
-autoDeflectToggle.Text = "Auto Deflect: OFF"
-autoDeflectToggle.Parent = scroll
-
-autoDeflectToggle.MouseButton1Click:Connect(function()
-    autoDeflectToggled = not autoDeflectToggled
-    autoDeflectToggle.Text = "Auto Deflect: " .. (autoDeflectToggled and "ON" or "OFF")
-    autoDeflectToggle.BackgroundColor3 = autoDeflectToggled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
-    
-    if autoDeflectToggled then
-        local success, result = pcall(function()
-            local t = 0
-            autoDeflectConn = RunService.Heartbeat:Connect(function(dt)
-                t = t + dt
-                if t >= 1/_G.SomethingBossFightConfig.autoDeflectSpeed then
-                    t = 0
-                    -- Auto deflect logic would go here
-                end
-            end)
-        end)
-        
-        if not success then
-            -- print("Auto deflect error:", result)
-        end
-    else
-        if autoDeflectConn then
-            autoDeflectConn:Disconnect()
-            autoDeflectConn = nil
-        end
-    end
-end)
-
--- Auto Buff Toggle
-local buffToggled = false
-local buffConnection = nil
-
-local buffToggle = Instance.new("TextButton")
-buffToggle.Name = "BuffToggle"
-buffToggle.Size = UDim2.new(1, -20, 0, 30)
-buffToggle.Position = UDim2.new(0, 10, 0, 170)
-buffToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-buffToggle.TextColor3 = Color3.new(1, 1, 1)
-buffToggle.Font = Enum.Font.SourceSans
-buffToggle.TextSize = 14
-buffToggle.Text = "Auto Buff: OFF"
-buffToggle.Parent = scroll
-
-buffToggle.MouseButton1Click:Connect(function()
-    buffToggled = not buffToggled
-    buffToggle.Text = "Auto Buff: " .. (buffToggled and "ON" or "OFF")
-    buffToggle.BackgroundColor3 = buffToggled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(60, 60, 70)
-    
-    if buffToggled then
-        local success, result = pcall(function()
-            local function applyBuffs()
-                -- Safely try to apply buffs
-                if RepStorage.ClassModule and RepStorage.ClassModule.Pularos and RepStorage.ClassModule.Pularos.RemoteEvents.ApplyBuff then
-                    RepStorage.ClassModule.Pularos.RemoteEvents.ApplyBuff:FireServer()
-                end
-                if RepStorage.ClassModule and RepStorage.ClassModule.ChainsBinder and RepStorage.ClassModule.ChainsBinder.RemoteEvents.ApplyBuff then
-                    RepStorage.ClassModule.ChainsBinder.RemoteEvents.ApplyBuff:FireServer(1)
-                    RepStorage.ClassModule.ChainsBinder.RemoteEvents.ApplyBuff:FireServer(2)
-                end
-                if RepStorage.ClassModule and RepStorage.ClassModule.Soulslayer and RepStorage.ClassModule.Soulslayer.RemoteEvents.ApplyBuff then
-                    RepStorage.ClassModule.Soulslayer.RemoteEvents.ApplyBuff:FireServer()
-                end
-                if RepStorage.ClassModule and RepStorage.ClassModule.Bloodhound and RepStorage.ClassModule.Bloodhound.RemoteEvents.ApplyBuff then
-                    RepStorage.ClassModule.Bloodhound.RemoteEvents.ApplyBuff:FireServer()
-                end
-                if RepStorage.ClassModule and RepStorage.ClassModule.Timekeeper and RepStorage.ClassModule.Timekeeper.RemoteEvents.ApplyBuff then
-                    RepStorage.ClassModule.Timekeeper.RemoteEvents.ApplyBuff:FireServer()
-                end
-            end
-            
-            buffConnection = RunService.Heartbeat:Connect(function()
-                if buffToggled then
-                    applyBuffs()
-                end
-            end)
-        end)
-        
-        if not success then
-            -- print("Auto buff error:", result)
-        end
-    else
-        if buffConnection then
-            buffConnection:Disconnect()
-            buffConnection = nil
-        end
-    end
-end)
-
--- Instant Kill Button
-local instantKillButton = Instance.new("TextButton")
-instantKillButton.Name = "InstantKillButton"
-instantKillButton.Size = UDim2.new(1, -20, 0, 30)
-instantKillButton.Position = UDim2.new(0, 10, 0, 210)
-instantKillButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-instantKillButton.TextColor3 = Color3.new(1, 1, 1)
-instantKillButton.Font = Enum.Font.SourceSans
-instantKillButton.TextSize = 14
-instantKillButton.Text = "Instant Kill (Bloodhound)"
-instantKillButton.Parent = scroll
-
-instantKillButton.MouseButton1Click:Connect(function()
-    -- Executor-friendly instant kill
-    local success, result = pcall(function()
-        if RepStorage.ClassModule and RepStorage.ClassModule.Bloodhound and RepStorage.ClassModule.Bloodhound.RemoteEvents.ApplyBuff then
-            for i = 1, 30 do
-                RepStorage.ClassModule.Bloodhound.RemoteEvents.ApplyBuff:FireServer()
-                task.wait(0.05)
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.MaxHealth = 100
+                humanoid.Health = 100
             end
         end
-    end)
-    
-    if not success then
-        -- print("Instant kill error:", result)
     end
 end)
 
--- Close button functionality
-closeButton.MouseButton1Click:Connect(function()
-    customGui:Destroy()
+-- Close button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(1, -20, 0, 30)
+closeBtn.Position = UDim2.new(0, 10, 0, 160)
+closeBtn.Text = "Close GUI"
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.SourceSans
+closeBtn.TextSize = 14
+closeBtn.Parent = window
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
 end)
 
--- Drag functionality for the window
-local dragging = false
-local dragStart = Vector2.new()
-local startPos = Vector2.new()
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = window.Position
-    end
-end)
-
-titleBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-        local delta = input.Position - dragStart
-        window.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- Executor-specific optimizations
-local function optimizeForExecutor()
-    -- Reduce CPU usage for executors
-    local lastUpdate = 0
-    RunService.Heartbeat:Connect(function()
-        local currentTime = tick()
-        if currentTime - lastUpdate > 0.1 then -- Throttle updates
-            lastUpdate = currentTime
-            -- Perform light updates here if needed
-        end
-    end)
-end
-
-optimizeForExecutor()
-
-print("[Boss Fight GUI] Executor-Friendly Version Loaded")
-print("Controls: Click buttons to toggle features")
-print("Optimized for Delta/Xeno executors")
-print("Auto Kill should now work properly")
+print("[Kill Aura] Attack ANYTHING with health")
+print("Controls: Kill Aura, Fly, God Mode toggles")
+print("Fly Controls: WASD + Space/Shift")
