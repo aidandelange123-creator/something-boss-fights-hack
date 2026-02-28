@@ -1,5 +1,5 @@
 _G.SomethingBossFightConfig = {
-    maxDistance = 15,
+    maxDistance = 13,
     autoDeflectSpeed = 15,
     autoKillSpeed = 6,
     instantKillDuration = 1
